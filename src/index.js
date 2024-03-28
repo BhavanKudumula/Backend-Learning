@@ -6,7 +6,7 @@ import {app} from "./app.js"
 
 
 dotevn.config({
-    path: './env'
+    path: './.env'
 });
 
 connectDb()

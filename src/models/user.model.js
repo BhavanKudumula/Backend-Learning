@@ -43,18 +43,18 @@ const userSchema = new mongoose.Schema (
             required: [true, "Password is Required"],
         },
         refreshToken : {
-            type: String,
-        },
+            type: String
+        }
     },
     {timestamps: true}
 
 )
 
-//brcyp
+//bcrypt
 userSchema.pre("save", async function (next) {
     if(!this.isModified("password")) return next();
 
-    this.Password = await bcrypt(this.Password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 
@@ -63,32 +63,32 @@ userSchema.methods.isPasswordCorrect = async function(password) {
 }
 
 userSchema.methods.generateAccessToken = function () {
-    jwt.sign(
-        {
-            _id: this._id,
-            email: this.email,
-            username: this.username,
-            fullName: this.fullName
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-        }
-    )
+        return jwt.sign(
+            {
+                _id: this._id,
+                email: this.email,
+                username: this.username,
+                fullName: this.fullName
+            },
+            process.env.ACCESS_TOKEN_SECRET,
+            {
+                expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+            }
+        )
 }
 userSchema.methods.generateRefreshToken = function () {
-    jwt.sign(
-        {
-            _id: this._id,
-            email: this.email,
-            username: this.username,
-            fullName: this.fullName
-        },
-        process.env.REFRESH_TOKEN_SECRET,
-        {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-        }
-    )
+    return jwt.sign(
+            {
+                _id: this._id,
+                email: this.email,
+                username: this.username,
+                fullName: this.fullName
+            },
+            process.env.REFRESH_TOKEN_SECRET,
+            {
+                expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+            }
+        )
 }
 
 //JWT Token

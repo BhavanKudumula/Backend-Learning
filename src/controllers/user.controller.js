@@ -105,7 +105,7 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
     //To check user is created
-    // 7. remove passwword and refersh token field from response
+    // 7. remove password and refersh token field from response
     const createdUser = await User.findById(user._id).select("-password -refreshToken")
 
     // 8. check for user creation
@@ -113,6 +113,7 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something Went while Register the user")
     }
 
+    //9. Send Response
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User Registered Successfully")
     )
@@ -257,10 +258,129 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 
 })
 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+
+    // we need to old password, new password, confirm passwords.
+    const {oldPassword, newPassword, confirmPassword } = req.body
+
+    //validate newPassword and confirmPassword are same or not
+
+    if(!(newPassword === confirmPassword)) {
+        throw new ApiError(401, "New Password and Confirm Password are not matching")
+    }
+
+    // Get user details from database for validating the password.
+    
+    const user = await User.findById(req.user?._id) // req.user is passed in auth middleware.
+    
+    // validate the old password provided by user with the password present in the system.
+    const isPasswordCorrect = await user.isPasswordValid(oldPassword);
+
+    if(!isPasswordCorrect) {
+        throw new ApiError(401, "Invalid Password")
+    }
+    
+    // set the password and save
+    user.password = newPassword;
+    await user.save({validateBeforeSave: false})
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "password changed successfully"))
+})
+
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user fetched Successfully"))
+})
+
+const updateAccountDetail = asyncHandler(async(req, res) => {
+    const {fullName, email} = req.body
+
+    if(!fullName || !email) {
+        throw new ApiError(400, "All the fields are required")
+    }
+
+    const user = User.findByIdAndDelete(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                email
+            }
+        },
+        {new: true}
+        ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account Details Updated Successfully"))
+})
+
+const updateUserAvatar = asyncHandler(async(req, res) => {
+    const avatarLocalPath = req.file?.path
+
+    if(!avatarLocalPath) {
+        throw new ApiError(400, "Avatar File is missing")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    if(!avatar.url) {
+        throw new ApiError(400, "Error uplodating Avatar")
+    }
+
+    const user = User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Avatar Updated Successfully"))
+})
+
+const updateUserCoverImage = asyncHandler(async(req, res) => {
+    const coverImageLocalPath = req.file?.path
+
+    if(!coverImageLocalPath) {
+        throw new ApiError(400, "CoverImage File is missing")
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    if(!coverImage.url) {
+        throw new ApiError(400, "Error uplodating Cover Image")
+    }
+
+    const user = User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                coverImage: coverImage.url
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Cover Image Updated Successfully"))
+})
+
 
 export { 
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    updateAccountDetail,
+    updateUserAvatar,
+    updateUserCoverImage,
 }
